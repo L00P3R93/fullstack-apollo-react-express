@@ -41,15 +41,24 @@ const resolvers = {
         user: (parent, { id }) => {
             return users[id];
         },
-        me: () => {
+        me: (parent, args, { me }) => {
             return me
         },
+    },
+
+    User: {
+        username: user => {
+            return user.username
+        }
     }
 }
 
 const server = new ApolloServer({
     typeDefs: schema,
-    resolvers    
+    resolvers,
+    context: {
+        me: users[1]
+    }    
 })
 
 server.start().then(() => {
