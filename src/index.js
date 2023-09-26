@@ -1,7 +1,10 @@
 import cors from 'cors'
 import express from 'express'
+import { v4 as uuidv4 } from 'uuid'
 import { ApolloServer, gql } from 'apollo-server-express'
 import 'dotenv/config'
+
+
 
 const app = express()
 
@@ -27,6 +30,11 @@ const schema = gql`
         id: ID!
         text: String!
         user: User!
+    }
+
+    type Mutation {
+        createMessage(text: String!): Message!
+        deleteMessage(id: ID!): Boolean!
     }
 `;
 
@@ -92,8 +100,30 @@ const resolvers = {
         user: message => {
             return users[message.userId]
         }
-    }
-}
+    },
+
+    Mutation: {
+        createMessage: (parent, { text }, { me }) => {
+            const id = uuidv4()
+            const message = {
+                id: id,
+                text,
+                userId: me.id,
+            }
+            messages[id] = message;
+            users[me.id].messageIds.push(id);
+
+            return message;
+        },
+
+        deleteMessage: (parent, { id }, { me }) => {
+            const { [id]: message, ...otherMessages} = messages;
+            if(!message) return false;
+            messages = otherMessages;
+            return true;
+        }
+    },
+};
 
 const server = new ApolloServer({
     typeDefs: schema,
@@ -104,14 +134,14 @@ const server = new ApolloServer({
 })
 
 server.start().then(() => {
-    console.log('[!] Server started')
+    console.log('[!] Server started');
 
     server.applyMiddleware({ app, path: '/graphql' });
 
     app.listen({ port: 8000 }, () => {
         console.log('Apollo Server on http://localhost:8000/graphql')
-    })
-})
+    });
+});
 
 
 
