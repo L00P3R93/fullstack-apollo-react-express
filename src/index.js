@@ -5,7 +5,7 @@ import 'dotenv/config'
 
 import resolvers from './resolvers'
 import schema from './schema'
-import models from './models'
+import models, { sequelize } from './models'
 
 const app = express()
 
@@ -16,7 +16,7 @@ const server = new ApolloServer({
     resolvers,
     context: {
         models,
-        me: models.users[1]
+        //me: models.users[1]
     }    
 })
 
@@ -24,9 +24,11 @@ server.start().then(() => {
     console.log('[!] Server started');
 
     server.applyMiddleware({ app, path: '/graphql' });
-
-    app.listen({ port: 8000 }, () => {
-        console.log('Apollo Server on http://localhost:8000/graphql')
+    sequelize.sync().then(async () => {
+        console.log('[!] Database synced');
+        app.listen({ port: 8000 }, () => {
+            console.log('Apollo Server on http://localhost:8000/graphql')
+        });
     });
 });
 
