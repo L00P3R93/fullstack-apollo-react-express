@@ -1,7 +1,10 @@
 import cors from 'cors'
 import express from 'express'
 import { ApolloServer } from 'apollo-server-express'
+import {faker} from '@faker-js/faker'
+
 import 'dotenv/config'
+
 
 import resolvers from './resolvers'
 import schema from './schema'
@@ -14,17 +17,28 @@ app.use(cors())
 const server = new ApolloServer({
     typeDefs: schema,
     resolvers,
-    context: {
-        models,
-        //me: models.users[1]
-    }    
+    context: async () => {
+        const me = await models.User.findByLogin('sntaks');
+        return {
+            models,
+            me,
+        };
+    }
 })
+
+const eraseDatabaseOnSync = true;
 
 server.start().then(() => {
     console.log('[!] Server started');
 
+
     server.applyMiddleware({ app, path: '/graphql' });
-    sequelize.sync().then(async () => {
+    sequelize.sync({ force: eraseDatabaseOnSync }).then(async () => {
+        if(eraseDatabaseOnSync){
+            console.log('[!] Database erased');
+            createUsersWithMessages();
+            await seedDB();   
+        }
         console.log('[!] Database synced');
         app.listen({ port: 8000 }, () => {
             console.log('Apollo Server on http://localhost:8000/graphql')
@@ -32,6 +46,58 @@ server.start().then(() => {
     });
 });
 
+const createUsersWithMessages = async () => {
+    await models.User.create(
+        {
+            username: 'sntaks',
+            messages: [
+                {
+                    text: 'Sntaks World'
+                },
+            ],
+        },
+        {
+            include: [models.Message],
+        }
+    );
+
+    await models.User.create(
+        {
+            username: 'malaq',
+            messages: [
+                {
+                    text: 'Another Sntaks World'
+                },
+                {
+                    text: 'Malaq World ...'
+                }
+            ],
+        },
+        {
+            include: [models.Message],
+        }
+    );
+};
+
+const seedDB = async () => {
+    try {
+        for(let i=4; i<9; i++){
+            const user = await models.User.create({
+                username: faker.internet.userName(),
+            })
+
+            for(let j=0; j<3; j++){
+                const message = await models.Message.create({
+                    text: faker.lorem.sentence(),
+                    userId: user.id,
+                })
+            }
+        }
+        console.log("[!] Database seeded");
+    } catch (error) {
+        console.log("[!] Error Seeding Database: ", error);
+    }
+}
 
 
 

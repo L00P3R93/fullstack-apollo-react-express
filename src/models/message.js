@@ -1,14 +1,16 @@
-const getMessageModel = (sequelize, DataTypes) => {
+const getMessageModel = (sequelize, { DataTypes }) => {
     const Message = sequelize.define('message', {
         text: {
-            type: DataTypes.STRING
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                notEmpty: true
+            }
         },
     });
 
-    Message.associate = models => {
-        Message.belongsTo(models.User, {
-            onDelete: 'CASCADE'
-        });
+    Message.associate = (models) => {
+        Message.belongsTo(models.User, { onDelete: 'CASCADE' });
     };
 
     return Message;
