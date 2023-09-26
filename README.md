@@ -1,2 +1,2 @@
 # fullstack-apollo-react-express
- Fullstack Apollo React Express Application
+A universally usable GraphQL boilerplate project to serve as a foundation for software development projects
