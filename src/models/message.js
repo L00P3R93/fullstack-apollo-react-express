@@ -4,7 +4,10 @@ const getMessageModel = (sequelize, { DataTypes }) => {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true
+                notEmpty: {
+                    args: true,
+                    msg: 'A message has to have text'
+                }
             }
         },
     });

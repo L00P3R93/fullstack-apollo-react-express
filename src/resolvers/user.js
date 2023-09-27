@@ -7,6 +7,7 @@ export default {
             return await models.User.findByPk(id);
         },
         me: async (parent, args, { me, models }) => {
+            if(!me) return null;
             return await models.User.findByPk(me.id);
         },
     },
@@ -16,7 +17,7 @@ export default {
             return await models.Message.findAll({
                 where: {
                     userId: user.id
-                }
+                }``
             })
         }
     },

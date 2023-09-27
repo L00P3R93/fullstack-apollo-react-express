@@ -18,10 +18,15 @@ export default {
 
     Mutation: {
         createMessage: async (parent, { text }, { me, models }) => {
-            return await models.Message.create({
-                text,
-                userId: me.id,
-            })
+            try {
+                return await models.Message.create({
+                    text,
+                    userId: me.id,
+                })
+            } catch (error) {
+                throw new Error(error)
+            }
+            
         },
 
         deleteMessage: async (parent, { id }, { models }) => {
