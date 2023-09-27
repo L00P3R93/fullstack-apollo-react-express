@@ -63,7 +63,7 @@ server.start().then(() => {
     sequelize.sync({ force: eraseDatabaseOnSync }).then(async () => {
         if(eraseDatabaseOnSync){
             console.log('[!] Database erased');
-            createUsersWithMessages();
+            createUsersWithMessages(new Date());
             await seedDB();   
         }
         console.log('[!] Database synced');
@@ -73,7 +73,7 @@ server.start().then(() => {
     });
 });
 
-const createUsersWithMessages = async () => {
+const createUsersWithMessages = async (date) => {
     await models.User.create(
         {
             username: 'sntaks',
@@ -82,7 +82,8 @@ const createUsersWithMessages = async () => {
             password: 'sntaks',
             messages: [
                 {
-                    text: 'Sntaks World'
+                    text: 'Sntaks World',
+                    createdAt: date.setSeconds(date.getSeconds() + 1),
                 },
             ],
         },
@@ -98,10 +99,12 @@ const createUsersWithMessages = async () => {
             password: 'malaq',
             messages: [
                 {
-                    text: 'Another Sntaks World'
+                    text: 'Another Sntaks World',
+                    createdAt: date.setSeconds(date.getSeconds() + 1),
                 },
                 {
-                    text: 'Malaq World ...'
+                    text: 'Malaq World ...',
+                    createdAt: date.setSeconds(date.getSeconds() + 1),
                 }
             ],
         },
@@ -124,6 +127,7 @@ const seedDB = async () => {
             for(let j=0; j<3; j++){
                 const message = await models.Message.create({
                     text: faker.lorem.sentence(),
+                    createdAt: faker.date.anytime(),
                     userId: user.id,
                 })
             }
