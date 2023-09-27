@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import bcrypt from 'bcrypt';
 import { ApolloServer } from 'apollo-server-express'
 import {faker} from '@faker-js/faker'
 
@@ -30,9 +31,11 @@ const server = new ApolloServer({
     },
     context: async () => {
         const me = await models.User.findByLogin('sntaks');
+        const secret = process.env.SECRET
         return {
             models,
             me,
+            secret
         };
     }
 })
@@ -61,6 +64,8 @@ const createUsersWithMessages = async () => {
     await models.User.create(
         {
             username: 'sntaks',
+            email: 'sntaks@sntaks.com',
+            password: 'sntaks',
             messages: [
                 {
                     text: 'Sntaks World'
@@ -75,6 +80,8 @@ const createUsersWithMessages = async () => {
     await models.User.create(
         {
             username: 'malaq',
+            email: 'malaq@sntaks.com',
+            password: 'malaq',
             messages: [
                 {
                     text: 'Another Sntaks World'
@@ -93,8 +100,11 @@ const createUsersWithMessages = async () => {
 const seedDB = async () => {
     try {
         for(let i=4; i<9; i++){
+            let user_name = faker.internet.userName()
             const user = await models.User.create({
-                username: faker.internet.userName(),
+                username: user_name,
+                email: faker.internet.email(),
+                password: user_name,
             })
 
             for(let j=0; j<3; j++){
