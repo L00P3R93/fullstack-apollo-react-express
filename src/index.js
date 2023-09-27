@@ -1,7 +1,8 @@
 import cors from 'cors'
 import express from 'express'
-import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { ApolloServer } from 'apollo-server-express'
+import { GraphQLError } from 'graphql';
 import {faker} from '@faker-js/faker'
 
 import 'dotenv/config'
@@ -14,6 +15,19 @@ import models, { sequelize } from './models'
 const app = express()
 
 app.use(cors())
+
+
+const getMe = async req => {
+    const token = req.headers['x-token'];
+
+    if(token){
+        try{
+            return await jwt.verify(token, process.env.SECRET);
+        }catch(e){
+            throw new GraphQLError('Your session expired. Sign-In again', { extensions: { code: 'UNAUTHENTICATED' } });
+        }
+    }
+}
 
 const server = new ApolloServer({
     typeDefs: schema,
@@ -29,13 +43,12 @@ const server = new ApolloServer({
             message,
         };
     },
-    context: async () => {
-        const me = await models.User.findByLogin('sntaks');
-        const secret = process.env.SECRET
+    context: async ({req}) => {
+        const me = await getMe(req);
         return {
             models,
             me,
-            secret
+            secret: process.env.SECRET
         };
     }
 })
@@ -65,6 +78,7 @@ const createUsersWithMessages = async () => {
         {
             username: 'sntaks',
             email: 'sntaks@sntaks.com',
+            role: 'ADMIN',
             password: 'sntaks',
             messages: [
                 {

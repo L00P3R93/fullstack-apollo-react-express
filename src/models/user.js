@@ -25,6 +25,9 @@ const getUserModel = (sequelize, { DataTypes }) => {
                 notEmpty: true,
                 len: [3, 42]
             }
+        },
+        role: {
+            type: DataTypes.STRING,
         }
     });
 
