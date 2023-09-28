@@ -116,7 +116,7 @@ const createUsersWithMessages = async (date) => {
 
 const seedDB = async () => {
     try {
-        for(let i=4; i<9; i++){
+        for(let i=4; i<10; i++){
             let user_name = faker.internet.userName()
             const user = await models.User.create({
                 username: user_name,
