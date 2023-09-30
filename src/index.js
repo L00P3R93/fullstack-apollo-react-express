@@ -2,6 +2,11 @@ import cors from 'cors'
 import express from 'express'
 import jwt from 'jsonwebtoken';
 import { ApolloServer } from 'apollo-server-express'
+import { createServer } from 'http';
+import { ApolloServerPluginDrainHttpServer, ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws'
 import { GraphQLError } from 'graphql';
 import {faker} from '@faker-js/faker'
 
@@ -9,12 +14,31 @@ import 'dotenv/config'
 
 
 import resolvers from './resolvers'
-import schema from './schema'
+import mergedTypeDefs from './schema'
 import models, { sequelize } from './models'
 
-const app = express()
+const mySchema = makeExecutableSchema({ 
+    typeDefs: mergedTypeDefs, 
+    resolvers 
+})
 
-app.use(cors())
+const app = express()
+const httpServer = createServer(app);
+
+const corsOptions = {
+    origin: 'https://studio.apollographql.com',
+    credentials: true, // You might need this option depending on your use case
+};
+
+
+app.use(cors(corsOptions));
+
+const wsServer = new WebSocketServer({
+    server: httpServer,
+    path: '/graphql',
+})
+
+const serverCleanup = useServer({ mySchema }, wsServer);
 
 
 const getMe = async req => {
@@ -30,8 +54,20 @@ const getMe = async req => {
 }
 
 const server = new ApolloServer({
-    typeDefs: schema,
-    resolvers,
+    schema: mySchema,
+    plugins: [
+        ApolloServerPluginDrainHttpServer({ httpServer }),
+        {
+            async serverWillStart(){
+                return {
+                    async drainServer(){
+                        await serverCleanup.dispose();
+                    }
+                }
+            }
+        },
+        //ApolloServerPluginLandingPageLocalDefault({ embed: true})
+    ],
     formatError: (error) => {
         // remove the internal sequelize error message
         // leave only the important validation error
@@ -43,8 +79,12 @@ const server = new ApolloServer({
             message,
         };
     },
-    context: async ({req}) => {
-        const me = await getMe(req);
+    context: async ({ req, connection }) => {
+        if(connection){
+            return { models };
+        }
+
+        const me = req ? await getMe(req) : null;
         return {
             models,
             me,
@@ -57,9 +97,7 @@ const eraseDatabaseOnSync = true;
 
 server.start().then(() => {
     console.log('[!] Server started');
-
-
-    server.applyMiddleware({ app, path: '/graphql' });
+    server.applyMiddleware({ app });
     sequelize.sync({ force: eraseDatabaseOnSync }).then(async () => {
         if(eraseDatabaseOnSync){
             console.log('[!] Database erased');
@@ -67,10 +105,16 @@ server.start().then(() => {
             await seedDB();   
         }
         console.log('[!] Database synced');
-        app.listen({ port: 8000 }, () => {
-            console.log('Apollo Server on http://localhost:8000/graphql')
-        });
     });
+});
+
+httpServer.listen(process.env.PORT, () => {
+    console.log(
+        `🚀 Query endpoint ready at http://localhost:${process.env.PORT}${server.graphqlPath}`
+    );
+    console.log(
+        `🚀 Subscription endpoint ready at ws://localhost:${process.env.PORT}${server.graphqlPath}`
+    );
 });
 
 const createUsersWithMessages = async (date) => {

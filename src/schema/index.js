@@ -1,3 +1,4 @@
+import { mergeTypeDefs } from "@graphql-tools/merge";
 import { gql } from "apollo-server-express";
 
 import userSchema from './user';
@@ -20,8 +21,10 @@ const linkSchema = gql`
     }
 `;
 
-export default [
+const mergedTypeDefs = mergeTypeDefs([
     linkSchema,
     userSchema,
     messageSchema
-]
+])
+
+export default mergedTypeDefs;
