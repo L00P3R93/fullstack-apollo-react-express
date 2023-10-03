@@ -24,7 +24,7 @@ const linkSchema = gql`
 const mergedTypeDefs = mergeTypeDefs([
     linkSchema,
     userSchema,
-    messageSchema
+    messageSchema,
 ])
 
 export default mergedTypeDefs;

@@ -3,12 +3,12 @@ import express from 'express'
 import jwt from 'jsonwebtoken';
 import { ApolloServer } from 'apollo-server-express'
 import { createServer } from 'http';
-import { ApolloServerPluginDrainHttpServer, ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
+import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws'
 import { GraphQLError } from 'graphql';
-import {faker} from '@faker-js/faker'
+import { faker } from '@faker-js/faker'
 
 import 'dotenv/config'
 
@@ -25,20 +25,14 @@ const mySchema = makeExecutableSchema({
 const app = express()
 const httpServer = createServer(app);
 
-const corsOptions = {
-    origin: 'https://studio.apollographql.com',
-    credentials: true, // You might need this option depending on your use case
-};
-
-
-app.use(cors(corsOptions));
+app.use(cors());
 
 const wsServer = new WebSocketServer({
     server: httpServer,
     path: '/graphql',
 })
 
-const serverCleanup = useServer({ mySchema }, wsServer);
+const serverCleanup = useServer({ schema: mySchema } , wsServer);
 
 
 const getMe = async req => {
@@ -55,6 +49,7 @@ const getMe = async req => {
 
 const server = new ApolloServer({
     schema: mySchema,
+    introspection: true,
     plugins: [
         ApolloServerPluginDrainHttpServer({ httpServer }),
         {
@@ -66,7 +61,6 @@ const server = new ApolloServer({
                 }
             }
         },
-        //ApolloServerPluginLandingPageLocalDefault({ embed: true})
     ],
     formatError: (error) => {
         // remove the internal sequelize error message
@@ -98,24 +92,26 @@ const eraseDatabaseOnSync = true;
 server.start().then(() => {
     console.log('[!] Server started');
     server.applyMiddleware({ app });
-    sequelize.sync({ force: eraseDatabaseOnSync }).then(async () => {
-        if(eraseDatabaseOnSync){
+    const isTest = !!process.env.TEST_DATABASE;
+    sequelize.sync({ force: isTest }).then(async () => {
+        if(isTest){
             console.log('[!] Database erased');
-            createUsersWithMessages(new Date());
-            await seedDB();   
+            await createUsersWithMessages(new Date());
+            await seedDB();
         }
         console.log('[!] Database synced');
+        httpServer.listen(process.env.PORT, () => {
+            console.log(
+                `🚀 Query endpoint ready at http://localhost:${process.env.PORT}${server.graphqlPath}`
+            );
+            console.log(
+                `🚀 Subscription endpoint ready at ws://localhost:${process.env.PORT}${server.graphqlPath}`
+            );
+        });
     });
 });
 
-httpServer.listen(process.env.PORT, () => {
-    console.log(
-        `🚀 Query endpoint ready at http://localhost:${process.env.PORT}${server.graphqlPath}`
-    );
-    console.log(
-        `🚀 Subscription endpoint ready at ws://localhost:${process.env.PORT}${server.graphqlPath}`
-    );
-});
+
 
 const createUsersWithMessages = async (date) => {
     await models.User.create(
