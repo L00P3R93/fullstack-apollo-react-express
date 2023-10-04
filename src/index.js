@@ -9,13 +9,14 @@ import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws'
 import { GraphQLError } from 'graphql';
 import { faker } from '@faker-js/faker'
+import DataLoader from 'dataloader';
 
 import 'dotenv/config'
-
 
 import resolvers from './resolvers'
 import mergedTypeDefs from './schema'
 import models, { sequelize } from './models'
+import loaders from './loaders';
 
 const mySchema = makeExecutableSchema({ 
     typeDefs: mergedTypeDefs, 
@@ -46,6 +47,8 @@ const getMe = async req => {
         }
     }
 }
+
+const userLoader = new DataLoader(keys => loaders.user.batchUsers(keys, models))
 
 const server = new ApolloServer({
     schema: mySchema,
@@ -82,7 +85,10 @@ const server = new ApolloServer({
         return {
             models,
             me,
-            secret: process.env.SECRET
+            secret: process.env.SECRET,
+            loaders: {
+                users: userLoader
+            }
         };
     }
 })
